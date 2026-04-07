@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Accessibility Enforcement — Guardrails for AI-Generated Interfaces</title>
+  <meta name="description" content="Enforce accessibility guardrails during AI code generation. Reduce risk at development time, not after release.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-bg: #0a0a0f;
+      --color-surface: #12121a;
+      --color-surface-raised: #1a1a26;
+      --color-border: #2a2a3a;
+      --color-border-subtle: #1e1e2e;
+      --color-text: #e8e8f0;
+      --color-text-muted: #a0a0bc;
+      --color-text-dim: #8585a0;
+      --color-accent: #7c6aff;
+      --color-accent-glow: rgba(124, 106, 255, 0.15);
+      --color-accent-light: #a898ff;
+      --color-warning: #ffb347;
+      --color-success: #5cdb95;
+      --color-danger: #ff6b6b;
+      --color-code-bg: #0d0d14;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --max-width: 960px;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      html { scroll-behavior: smooth; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection {
+      background: var(--color-accent);
+      color: #fff;
+    }
+
+    a {
+      color: var(--color-accent-light);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      transition: color 0.2s;
+    }
+    a:hover { color: #fff; }
+    .btn { text-decoration: none; }
+    a:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 3px;
+      border-radius: 3px;
+    }
+
+    /* Visually hidden (screen reader only) */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Skip link */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 16px;
+      background: var(--color-accent);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      z-index: 1000;
+    }
+    .skip-link:focus {
+      top: 16px;
+    }
+
+    /* Header */
+    header {
+      border-bottom: 1px solid var(--color-border-subtle);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(20px);
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+    }
+    .logo span { color: var(--color-accent-light); }
+    nav a {
+      margin-left: 28px;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      font-weight: 500;
+      text-decoration: none;
+    }
+    nav a:hover { color: var(--color-text); text-decoration: underline; }
+
+    /* Hero */
+    .hero {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 100px 24px 80px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--color-warning);
+      background: rgba(255, 179, 71, 0.1);
+      border: 1px solid rgba(255, 179, 71, 0.2);
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 32px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 28px;
+      background: linear-gradient(135deg, #fff 0%, var(--color-accent-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--color-text-muted);
+      max-width: 620px;
+      margin: 0 auto 44px;
+      line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 3px;
+    }
+    .btn-primary {
+      background: var(--color-accent);
+      color: #fff;
+      box-shadow: 0 0 30px var(--color-accent-glow);
+    }
+    .btn-primary:hover {
+      background: #8d7eff;
+      color: #fff;
+      box-shadow: 0 0 50px rgba(124, 106, 255, 0.3);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: var(--color-surface-raised);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+    .btn-secondary:hover {
+      background: #222234;
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Purpose section — the star */
+    .purpose {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+    .purpose-card {
+      background: linear-gradient(135deg, rgba(124, 106, 255, 0.06) 0%, rgba(124, 106, 255, 0.02) 100%);
+      border: 1px solid rgba(124, 106, 255, 0.15);
+      border-radius: 20px;
+      padding: 64px;
+      position: relative;
+      overflow: hidden;
+    }
+    .purpose-card::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+    }
+    .purpose-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--color-accent-light);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 20px;
+    }
+    .purpose-card h2 {
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
+    }
+    .purpose-card p {
+      font-size: 1.05rem;
+      color: var(--color-text-muted);
+      max-width: 680px;
+      margin-bottom: 16px;
+      line-height: 1.8;
+    }
+    .purpose-insight {
+      margin-top: 40px;
+      padding: 24px 28px;
+      background: rgba(124, 106, 255, 0.06);
+      border-left: 3px solid var(--color-accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 1rem;
+      color: var(--color-text);
+      line-height: 1.7;
+    }
+    .purpose-insight strong {
+      color: var(--color-accent-light);
+    }
+
+    /* Problem statement */
+    .problem {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+    .problem h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+    .problem > p {
+      color: var(--color-text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 48px;
+      max-width: 600px;
+    }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      list-style: none;
+      padding: 0;
+    }
+    .problem-item {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius);
+      padding: 28px;
+    }
+    .problem-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      background: rgba(255, 107, 107, 0.1);
+      color: var(--color-danger);
+    }
+    .problem-item h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .problem-item p {
+      font-size: 0.88rem;
+      color: var(--color-text-dim);
+      line-height: 1.6;
+    }
+
+    /* How it works */
+    .how {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+    .how h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+    .how > p {
+      color: var(--color-text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 48px;
+      max-width: 600px;
+    }
+    .steps {
+      display: grid;
+      gap: 2px;
+      list-style: none;
+      padding: 0;
+      counter-reset: step-counter;
+    }
+    .step {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 24px;
+      align-items: start;
+      padding: 28px;
+      background: var(--color-surface);
+      border-radius: var(--radius-sm);
+      counter-increment: step-counter;
+    }
+    .step:first-child { border-radius: var(--radius) var(--radius) var(--radius-sm) var(--radius-sm); }
+    .step:last-child { border-radius: var(--radius-sm) var(--radius-sm) var(--radius) var(--radius); }
+    .step-number {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--color-accent-glow);
+      border: 1px solid rgba(124, 106, 255, 0.2);
+      color: var(--color-accent-light);
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .step p {
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+      line-height: 1.6;
+    }
+
+    /* Code example */
+    .example {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+    .example h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 48px;
+      letter-spacing: -0.02em;
+    }
+    .code-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .code-comparison { grid-template-columns: 1fr; }
+    }
+    .code-panel {
+      background: var(--color-code-bg);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .code-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--color-border-subtle);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .code-panel-header .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-red { background: var(--color-danger); }
+    .dot-green { background: var(--color-success); }
+    .code-panel pre {
+      padding: 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--color-text-muted);
+    }
+    .code-panel pre .tag { color: #ff7b72; }
+    .code-panel pre .attr { color: #d2a8ff; }
+    .code-panel pre .val { color: #a5d6ff; }
+    .code-panel pre .comment { color: var(--color-text-dim); }
+
+    /* Modes */
+    .modes {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+    .modes h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+    .modes > p {
+      color: var(--color-text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 48px;
+      max-width: 600px;
+    }
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 720px) {
+      .mode-grid { grid-template-columns: 1fr; }
+    }
+    .mode-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      transition: border-color 0.2s;
+    }
+    .mode-card:hover { border-color: var(--color-border); }
+    .mode-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    .mode-tag-basic { background: rgba(92, 219, 149, 0.12); color: var(--color-success); }
+    .mode-tag-public { background: rgba(255, 179, 71, 0.12); color: var(--color-warning); }
+    .mode-tag-enterprise { background: rgba(255, 107, 107, 0.12); color: var(--color-danger); }
+    .mode-card h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .mode-card p {
+      font-size: 0.88rem;
+      color: var(--color-text-dim);
+      line-height: 1.6;
+    }
+
+    /* Discovery */
+    .discovery {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+    .discovery-card {
+      background: linear-gradient(135deg, rgba(92, 219, 149, 0.05) 0%, rgba(92, 219, 149, 0.01) 100%);
+      border: 1px solid rgba(92, 219, 149, 0.15);
+      border-radius: 20px;
+      padding: 56px;
+    }
+    .discovery-card h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .discovery-card p {
+      font-size: 1rem;
+      color: var(--color-text-muted);
+      max-width: 640px;
+      line-height: 1.8;
+      margin-bottom: 14px;
+    }
+    .discovery-highlight {
+      color: var(--color-success);
+      font-weight: 600;
+    }
+
+    /* CTA */
+    .cta {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px 120px;
+      text-align: center;
+    }
+    .cta h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+    .cta p {
+      color: var(--color-text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 36px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Not claims */
+    .not-claims {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 24px 100px;
+    }
+    .not-claims h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+    .not-list {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+      max-width: 560px;
+    }
+    .not-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.95rem;
+      color: var(--color-text-muted);
+    }
+    .not-list li::before {
+      content: '\00d7';
+      color: var(--color-text-dim);
+      font-weight: 700;
+      font-size: 1.2rem;
+      line-height: 1.5;
+      flex-shrink: 0;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--color-border-subtle);
+      padding: 40px 24px;
+      text-align: center;
+    }
+    footer p {
+      font-size: 0.85rem;
+      color: var(--color-text-dim);
+    }
+    footer a { color: var(--color-text-muted); }
+
+    /* High contrast / forced colors */
+    @media (forced-colors: active) {
+      .btn-primary, .btn-secondary { border: 2px solid ButtonText; }
+      .purpose-card, .discovery-card, .mode-card, .problem-item, .code-panel, .step { border: 1px solid CanvasText; }
+      .skip-link:focus { outline: 3px solid Highlight; }
+      .hero h1 { -webkit-text-fill-color: unset; background: none; color: CanvasText; }
+      .step-number { border: 2px solid CanvasText; }
+      .dot-red, .dot-green { forced-color-adjust: none; }
+    }
+
+    /* Print styles */
+    @media print {
+      header { position: static; }
+      .btn { border: 1px solid #000; }
+      body { background: #fff; color: #000; }
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .hero { padding: 60px 20px 60px; }
+      .purpose-card { padding: 36px 24px; }
+      .discovery-card { padding: 36px 24px; }
+      .step { grid-template-columns: 1fr; gap: 12px; }
+      .step-number { width: 36px; height: 36px; font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">AI <span>Accessibility</span> Enforcement</div>
+    <nav aria-label="Main navigation">
+      <a href="#purpose">Purpose</a>
+      <a href="#how">How it works</a>
+      <a href="#modes">Modes</a>
+      <a href="https://github.com/vishalm/ai-accessibility-enforcement">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" tabindex="-1">
+
+  <!-- Hero -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="hero-badge">Experiment &middot; v1.1.4</div>
+    <h1 id="hero-heading">Accessibility should be enforced<br>during generation, not after.</h1>
+    <p>AI tools generate entire interfaces. But accessibility is rarely considered during generation. This project embeds accessibility guardrails directly into the AI development workflow.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/vishalm/ai-accessibility-enforcement/blob/main/prompt/enforcement-mode.md" class="btn btn-primary">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+        Copy the prompt
+      </a>
+      <a href="#purpose" class="btn btn-secondary">Learn why</a>
+    </div>
+  </section>
+
+  <!-- Purpose -->
+  <section class="purpose" id="purpose" aria-labelledby="purpose-heading">
+    <div class="purpose-card">
+      <div class="purpose-label">The core idea</div>
+      <h2 id="purpose-heading">What if accessibility was a constraint during code generation, not a fix applied afterward?</h2>
+      <p>AI coding tools like Cursor, Lovable, Base44, and Claude Code can generate full interfaces from a prompt. But without explicit guidance, they produce code with basic accessibility failures &mdash; missing labels, broken keyboard support, invented ARIA patterns.</p>
+      <p>This project is a single, copyable prompt that transforms an AI coding assistant into a cautious accessibility engineer. It enforces bounded, traceable fixes on the most impactful accessibility issues &mdash; the ones that affect real users the most.</p>
+      <p><strong>The goal is not compliance. The goal is reducing accessibility risk at the moment code is written.</strong></p>
+      <div class="purpose-insight" role="note">
+        <strong>Why this matters now:</strong> As AI generates more of the web, accessibility failures will scale with it. Fixing this at the source &mdash; during generation &mdash; is more effective than fixing it downstream. This is accessibility as infrastructure, not as afterthought.
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section class="problem" aria-labelledby="problem-heading">
+    <h2 id="problem-heading">Without guardrails, AI gets accessibility wrong</h2>
+    <p>Observed failure modes when asking AI tools to "fix accessibility":</p>
+    <ul class="problem-grid" role="list">
+      <li class="problem-item">
+        <div class="problem-icon" aria-hidden="true">&times;</div>
+        <h3>Compliance hallucinations</h3>
+        <p>Models claim "WCAG compliant" with no basis, creating legal risk in enterprise contexts.</p>
+      </li>
+      <li class="problem-item">
+        <div class="problem-icon" aria-hidden="true">&times;</div>
+        <h3>Invented ARIA patterns</h3>
+        <p>Models fabricate ARIA roles and attributes that don't exist in any specification.</p>
+      </li>
+      <li class="problem-item">
+        <div class="problem-icon" aria-hidden="true">&times;</div>
+        <h3>Runaway refactors</h3>
+        <p>What starts as an accessibility fix becomes a full UI redesign, breaking working code.</p>
+      </li>
+      <li class="problem-item">
+        <div class="problem-icon" aria-hidden="true">&times;</div>
+        <h3>Design system damage</h3>
+        <p>Models aggressively change brand colors for contrast, ignoring intentional design decisions.</p>
+      </li>
+      <li class="problem-item">
+        <div class="problem-icon" aria-hidden="true">&times;</div>
+        <h3>Scope creep</h3>
+        <p>Fixes for a login form cascade into typography changes, icon swaps, and global updates.</p>
+      </li>
+      <li class="problem-item">
+        <div class="problem-icon" aria-hidden="true">&times;</div>
+        <h3>Overconfident output</h3>
+        <p>No distinction between verified fixes and best-effort guesses. Everything looks certain.</p>
+      </li>
+    </ul>
+  </section>
+
+  <!-- How it works -->
+  <section class="how" id="how" aria-labelledby="how-heading">
+    <h2 id="how-heading">How the enforcement loop works</h2>
+    <p>A controlled remediation protocol, not an autonomous refactor engine.</p>
+    <ol class="steps" role="list">
+      <li class="step">
+        <div class="step-number" aria-hidden="true">1</div>
+        <div>
+          <h3>Select enforcement mode</h3>
+          <p>Choose Basic-Safety, Public-Facing, or Enterprise-Critical. The AI will not proceed without a declared mode &mdash; this prevents it from guessing your risk context.</p>
+        </div>
+      </li>
+      <li class="step">
+        <div class="step-number" aria-hidden="true">2</div>
+        <div>
+          <h3>Identify critical flows</h3>
+          <p>The AI identifies 1&ndash;3 critical user flows (login, checkout, onboarding). Fixes are scoped only to components in those flows.</p>
+        </div>
+      </li>
+      <li class="step">
+        <div class="step-number" aria-hidden="true">3</div>
+        <div>
+          <h3>Evaluate 9 risk categories</h3>
+          <p>Keyboard operability, focus management, labeling, semantics, forms, structure, reflow, contrast, and complex components &mdash; prioritized by real-world impact.</p>
+        </div>
+      </li>
+      <li class="step">
+        <div class="step-number" aria-hidden="true">4</div>
+        <div>
+          <h3>Apply bounded fixes</h3>
+          <p>Maximum 4 files per run. No global refactors. The AI stops after each batch and asks if you want to continue. Staged commits, not autonomous rewrites.</p>
+        </div>
+      </li>
+      <li class="step">
+        <div class="step-number" aria-hidden="true">5</div>
+        <div>
+          <h3>Produce traceable output</h3>
+          <p>Issues list with WCAG Success Criteria references, a summary of fixes applied, and a prioritized backlog of remaining risks. Audit-style documentation, not vague suggestions.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- Code example -->
+  <section class="example" aria-labelledby="example-heading">
+    <h2 id="example-heading">Before and after</h2>
+    <div class="code-comparison">
+      <div class="code-panel">
+        <div class="code-panel-header">
+          <span class="dot dot-red" aria-hidden="true"></span>
+          Without enforcement
+        </div>
+        <pre><code><span class="comment">&lt;!-- Icon button: no accessible name --&gt;</span>
+<span class="tag">&lt;button&gt;</span>
+  <span class="tag">&lt;svg&gt;</span>...<span class="tag">&lt;/svg&gt;</span>
+<span class="tag">&lt;/button&gt;</span>
+
+<span class="comment">&lt;!-- Modal: no semantics --&gt;</span>
+<span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="val">"modal"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;button&gt;</span>X<span class="tag">&lt;/button&gt;</span>
+  <span class="tag">&lt;input</span> <span class="attr">placeholder</span>=<span class="val">"Email"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;/div&gt;</span></code></pre>
+      </div>
+      <div class="code-panel">
+        <div class="code-panel-header">
+          <span class="dot dot-green" aria-hidden="true"></span>
+          With enforcement mode
+        </div>
+        <pre><code><span class="comment">&lt;!-- Accessible name + hidden SVG --&gt;</span>
+<span class="tag">&lt;button</span> <span class="attr">aria-label</span>=<span class="val">"Open settings"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;svg</span> <span class="attr">aria-hidden</span>=<span class="val">"true"</span><span class="tag">&gt;</span>...<span class="tag">&lt;/svg&gt;</span>
+<span class="tag">&lt;/button&gt;</span>
+
+<span class="comment">&lt;!-- Dialog semantics + labels --&gt;</span>
+<span class="tag">&lt;div</span> <span class="attr">role</span>=<span class="val">"dialog"</span> <span class="attr">aria-modal</span>=<span class="val">"true"</span>
+     <span class="attr">aria-labelledby</span>=<span class="val">"title"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;h2</span> <span class="attr">id</span>=<span class="val">"title"</span><span class="tag">&gt;</span>Subscribe<span class="tag">&lt;/h2&gt;</span>
+  <span class="tag">&lt;label</span> <span class="attr">for</span>=<span class="val">"email"</span><span class="tag">&gt;</span>Email<span class="tag">&lt;/label&gt;</span>
+  <span class="tag">&lt;input</span> <span class="attr">id</span>=<span class="val">"email"</span> <span class="attr">type</span>=<span class="val">"email"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modes -->
+  <section class="modes" id="modes" aria-labelledby="modes-heading">
+    <h2 id="modes-heading">Three enforcement modes</h2>
+    <p>The right level of enforcement depends on your context. The AI won't proceed without an explicit choice.</p>
+    <div class="mode-grid">
+      <div class="mode-card">
+        <span class="mode-tag mode-tag-basic">Basic-Safety</span>
+        <h3>Internal tools</h3>
+        <p>Minimal exposure. Fixes keyboard traps, missing labels, and critical semantic gaps. For admin dashboards, internal apps, and low-risk interfaces.</p>
+      </div>
+      <div class="mode-card">
+        <span class="mode-tag mode-tag-public">Public-Facing</span>
+        <h3>Public websites</h3>
+        <p>Moderate exposure. Adds focus management, structure, and reflow checks. For marketing sites, SaaS products, and anything with broad user reach.</p>
+      </div>
+      <div class="mode-card">
+        <span class="mode-tag mode-tag-enterprise">Enterprise-Critical</span>
+        <h3>Regulated products</h3>
+        <p>Full enforcement. WCAG citations, defensibility language, complex component patterns. For products under procurement scrutiny or VPAT requirements.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Discovery -->
+  <section class="discovery" aria-labelledby="discovery-heading">
+    <div class="discovery-card">
+      <h2 id="discovery-heading">An unexpected discovery</h2>
+      <p>During testing, after running the enforcement prompt, we asked the AI to build an unrelated component: <em>"Create a city filter dropdown."</em> Accessibility was never mentioned.</p>
+      <p>Yet the generated component included ARIA combobox attributes, keyboard navigation, accessible labeling, and semantic structure.</p>
+      <p>The enforcement prompt appears to function as <span class="discovery-highlight">session-level education</span>. Once activated, accessibility becomes a default constraint for the rest of the AI session &mdash; even for unrelated tasks.</p>
+      <p>If this effect proves consistent, enforcement prompts could serve as both <strong>remediation</strong> (fix existing code) and <strong>preventive guidance</strong> (influence how AI generates new code).</p>
+    </div>
+  </section>
+
+  <!-- What this is NOT -->
+  <section class="not-claims" aria-labelledby="not-heading">
+    <h2 id="not-heading">What this experiment is not</h2>
+    <ul class="not-list" role="list">
+      <li>A guarantee of WCAG compliance</li>
+      <li>A replacement for accessibility testing</li>
+      <li>A replacement for accessibility expertise</li>
+      <li>An automated accessibility overlay</li>
+      <li>A fix for every accessibility issue</li>
+    </ul>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" aria-labelledby="cta-heading">
+    <h2 id="cta-heading">Try it in 30 seconds</h2>
+    <p>Copy the prompt. Paste it into your AI tool. Ask it to review your interface.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/vishalm/ai-accessibility-enforcement/blob/main/prompt/enforcement-mode.md" class="btn btn-primary">
+        Get the prompt
+      </a>
+      <a href="https://github.com/vishalm/ai-accessibility-enforcement" class="btn btn-secondary">
+        View on GitHub
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>An experiment by <a href="https://github.com/vishalm/ai-accessibility-enforcement">Senseit</a> &middot; MIT License &middot; Feedback welcome via <a href="https://github.com/vishalm/ai-accessibility-enforcement/issues">GitHub Issues</a></p>
+</footer>
+
+</body>
+</html>
